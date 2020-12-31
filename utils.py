@@ -1,4 +1,7 @@
 class FileConfig:
+    """
+    Data file configurations are updated here
+    """
     def __init__(
             self,
             path_to_directory,

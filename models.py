@@ -10,20 +10,24 @@ import numpy as np
 import time, datetime
 import random
 
+from sklearn.metrics import log_loss
+
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 import os
+
 
 def flat_accuracy(preds, labels):
     pred_flat = np.argmax(preds, axis=1).flatten()
     labels_flat = labels.flatten()
     return np.sum(pred_flat == labels_flat) / len(labels_flat)
 
+
 def format_time(elapsed):
     # Round to the nearest second
     elapsed_rounded = int(round(elapsed))
 
     # hh:mm:ss
-    return(str(datetime.timedelta(seconds=elapsed_rounded)))
+    return str(datetime.timedelta(seconds=elapsed_rounded))
 
 
 MODEL_GROUPS = dict(
@@ -40,7 +44,7 @@ schedulers = dict(
 )
 
 eval_metrics = dict(
-    accuracy=f
+    accuracy=flat_accuracy
 )
 
 
@@ -62,18 +66,19 @@ class SequenceClassifierModel:
 
     @property
     def total_steps(self):
-        return (self.train_data) * self.epochs
+        return self.train_data * self.epochs
 
     def __init__(
             self,
-            model_group,
+            tr_pretrained_model_name_or_path,
+            optimizer,
+            scheduler,
             num_labels,
             train_data,
             val_data,
-            pretrained_model_name='bert-base-uncased',
-            optimizer_name='adam',
-            scheduler_name='linear_with_warmup',
+            tr_model_id='bert-base-uncased',
             epochs=2,
+            lr=2e-5,
             seed=100,
             eval_metric='accuracy',
             output_dir='./models/',
@@ -81,8 +86,24 @@ class SequenceClassifierModel:
             output_hidden_states=False
 
     ):
-        self.model = MODEL_GROUPS[model_group](
-            pretrained_model_name_or_path=pretrained_model_name,
+        """
+
+        :param tr_pretrained_model_name_or_path:
+        :param optimizer:
+        :param scheduler:
+        :param num_labels:
+        :param train_data:
+        :param val_data:
+        :param tr_model_id:
+        :param epochs:
+        :param seed:
+        :param eval_metric:
+        :param output_dir:
+        :param output_attentions:
+        :param output_hidden_states:
+        """
+        self.model = tr_pretrained_model_name_or_path(
+            pretrained_model_name_or_path=tr_model_id,
             num_labels=num_labels,
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states
@@ -92,32 +113,34 @@ class SequenceClassifierModel:
         self.val_data = val_data
         self.num_labels = num_labels
         self.epochs = epochs
-        self.optimizer = optimizers[optimizer_name]
-        self.scheduler = schedulers[scheduler_name]
+        self.optimizer = optimizer
+        self.scheduler = scheduler
         self.seed = seed
         self.eval_metric = eval_metrics[eval_metric]
         self.model_output_dir = output_dir
+        self.lr = lr,
 
-        if self.device.type == 'gpu':
-            self.model.cuda()
-
-    def prepare_for_training(self):
-        self.scheduler = self.scheduler(
+        self.optimizer = AdamW(
+            params=self.model_params,
+            lr=self.lr
+        )
+        self.scheduler = scheduler(
             optimizer=self.optimizer,
             num_warmup_steps=5,
             num_training_steps=self.total_steps
         )
+        if self.device.type == 'gpu':
+            self.model.cuda()
 
-        self.optimizer = AdamW(
-            params=self.model.parameters(),
-            lr=2e-5
-        )
+    def train(self):
+        """
 
+        :return:
+        """
         random.seed(self.seed)
         torch.manual_seed(self.seed)
         torch.cuda.manual_seed_all(self.seed)
 
-    def train(self):
         loss_values = []
 
         train_steps = len(self.train_data) - 1
@@ -154,19 +177,6 @@ class SequenceClassifierModel:
 
         print()
         print('Training Complete')
-
-    def save_model_to_disk(self):
-
-        output_model_file = os.path.join(self.model_output_dir, WEIGHTS_NAME)
-        output_config_file = os.path.join(self.model_output_dir, CONFIG_NAME)
-
-        self.model.to('cpu')
-
-        model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
-
-        torch.save(model_to_save.state_dict(), output_model_file)
-        model_to_save.config.to_json_file(output_config_file)
-        self.tokenizer.save_pretrained(self.model_output_dir)
 
     def _run_training(self):
         # 2. Iterating over the batches in train_data_loader👇🏾
@@ -297,3 +307,16 @@ class SequenceClassifierModel:
         return eval_accuracy
 
         # Report the final accuracy for this validation run
+
+    def save_model_to_disk(self):
+
+        output_model_file = os.path.join(self.model_output_dir, WEIGHTS_NAME)
+        output_config_file = os.path.join(self.model_output_dir, CONFIG_NAME)
+
+        self.model.to('cpu')
+
+        model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
+
+        torch.save(model_to_save.state_dict(), output_model_file)
+        model_to_save.config.to_json_file(output_config_file)
+        self.tokenizer.save_pretrained(self.model_output_dir)

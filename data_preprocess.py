@@ -3,7 +3,11 @@ import os
 import glob
 import numpy as np
 from pathlib import Path
-from utils import FileConfig
+from utils import FileConfig, train_valid_test_split, SequenceClassifierModel
+from transformers import DistilBertTokenizerFast
+from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
+import torch
+from config import FileConfig, ModelConfig
 
 """
 Each data source will have its own configuration, including
@@ -14,6 +18,29 @@ Each data source will have its own configuration, including
     - encoding (default to utf-8)
     - quoted vs not quoted 
 """
+
+
+def _encode_text_into_tokens(sentences):
+    tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
+    inputs = tokenizer(
+        sentences,
+        add_special_tokens=True,
+        max_length=64,
+        padding=True,
+        truncation=True,
+        return_tensors='pt'
+    )
+    return inputs
+
+
+def _wrap_tensors_in_dataloader(input_tensor, attention_mask_tensor, label_tensor, batch_size=32):
+    # DataLoader requires batch_size for training
+    # Recommended batch sizes are 16 and 32
+
+    data_dts = TensorDataset(input_tensor, attention_mask_tensor, label_tensor)
+    sampler = RandomSampler(data_dts)
+
+    return DataLoader(data_dts, sampler=sampler, batch_size=batch_size)
 
 
 class TextData(object):
@@ -27,11 +54,11 @@ class TextClassifierData(TextData):
 
     @property
     def sentences(self):
-        return self.data_df[self.file_config.sentence_column]
+        return self.data_df[self.file_config.sentence_column].tolist()
 
     @property
     def labels(self):
-        return self.data_df[self.file_config.target_column]
+        return self.data_df[self.file_config.target_column].tolist()
 
     @property
     def label_to_idx(self):
@@ -46,12 +73,15 @@ class TextClassifierData(TextData):
             self.label_to_idx[lb_text] for lb_text in self.labels
         ]
 
+    @property
+    def num_labels(self):
+        return len(set(self.labels))
+
     def __init__(self, config_object):
         self.file_config = config_object
-        
+
     def _load_data(self):
         file_path = self.file_config.path_to_directory
-
         if os.path.isdir(file_path):
             files = glob.glob(f'{file_path}/*.*')
         else:
@@ -62,7 +92,7 @@ class TextClassifierData(TextData):
                 fp,
                 sep=self.file_config.delimiter,
                 names=self.file_config.column_names,
-                header=self.file_config.header,
+                header=self.file_config.header_column,
                 encoding=self.file_config.encoding
             ) for fp in files
         ]
@@ -91,30 +121,67 @@ class TextClassifierData(TextData):
         df = self.data_df
         df[self.file_config.sentence_column] = df[self.file_config.sentence_column].str.lower().str.strip()
         df.drop(index=np.where(
-            df[self.file_config.sentence_column].str.len() < self.file_config.MIN_SENTENCE_LENGTH)[0],
+            df[self.file_config.sentence_column].str.len() < self.file_config.min_sentence_length)[0],
                 axis=0,
                 inplace=True
                 )
         self.data_df = df.dropna(how='any', axis=0)
 
+    def _prepare_data_for_training(self):
+        (train_texts, train_labels), (val_texts, val_labels), (test_texts, test_labels) = train_valid_test_split(
+            sentences=self.sentences, labels=self.label_tokens, valid_pct=0.20, test_pct=0.05
+        )
+
+        train_encodings = _encode_text_into_tokens(train_texts)
+        val_encodings = _encode_text_into_tokens(val_texts)
+        # test_encodings = _encode_text_into_tokens(test_texts)
+
+        train_data_loader = _wrap_tensors_in_dataloader(
+            input_tensor=train_encodings['input_ids'],
+            attention_mask_tensor=train_encodings['attention_mask'],
+            label_tensor=torch.tensor(train_labels)
+        )
+        val_data_loader = _wrap_tensors_in_dataloader(
+            input_tensor=val_encodings['input_ids'],
+            attention_mask_tensor=val_encodings['attention_mask'],
+            label_tensor=torch.tensor(val_labels)
+        )
+
+        # test_data_loader = _wrap_tensors_in_dataloader(
+        #     input_tensor=test_encodings['input_ids'],
+        #     attention_mask_tensor=test_encodings['attention_mask'],
+        #     label_tensor=test_labels
+        # )
+
+        return train_data_loader, val_data_loader
+
     def preprocess(self, **kwargs):
         """
-        
-        :param kwargs: 
-        :return: 
+        Cleanup and transform text data to make it suitable for classification
+        :param kwargs:
+        :return:
         """
+
         self._load_data()
         self._clean_sentence_column()
         self._clean_label_column()
         self._drop_underrepresented_classes()
-        
-        
+        train_dataloader, val_dataloader = self._prepare_data_for_training()
+
+        return train_dataloader, val_dataloader
+
+
 file_config = FileConfig(
-    path_to_directory=Path('./data/train'),
+    path_to_directory=Path('/content/drive/MyDrive/elite/elitelearn/data/device_train.csv'),
     target_column='label',
-    sequence_column='sentence',
+    sentence_column='sentence',
     column_names=['index', 'label', 'sentence']
 )
 
+def execute():
+    text_clas_data = TextClassifierData(file_config)
+    return text_clas_data.preprocess()
 
-text_clas_data = TextClassifierData(file_config)
+    # train_torch_data, val_torch_data = text_clas_data.preprocess()
+
+

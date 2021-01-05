@@ -62,15 +62,16 @@ class SequenceClassifierModel:
 
     @property
     def model_params(self):
-        return list(self.model.named_parameters())
+        return list(self.model.parameters())
 
     @property
     def total_steps(self):
-        return self.train_data * self.epochs
+        return len(self.train_data) * self.epochs
 
     def __init__(
             self,
-            tr_pretrained_model_name_or_path,
+            this_project_name,
+            tr_model_group,
             optimizer,
             scheduler,
             num_labels,
@@ -102,7 +103,8 @@ class SequenceClassifierModel:
         :param output_attentions:
         :param output_hidden_states:
         """
-        self.model = tr_pretrained_model_name_or_path(
+        self.this_project_name = this_project_name
+        self.model = tr_model_group.from_pretrained(
             pretrained_model_name_or_path=tr_model_id,
             num_labels=num_labels,
             output_attentions=output_attentions,
@@ -118,8 +120,7 @@ class SequenceClassifierModel:
         self.seed = seed
         self.eval_metric = eval_metrics[eval_metric]
         self.model_output_dir = output_dir
-        self.lr = lr,
-
+        self.lr = lr
         self.optimizer = AdamW(
             params=self.model_params,
             lr=self.lr
@@ -129,14 +130,15 @@ class SequenceClassifierModel:
             num_warmup_steps=5,
             num_training_steps=self.total_steps
         )
-        if self.device.type == 'gpu':
+        if self.device.type in ('cuda', 'gpu'):
             self.model.cuda()
 
     def train(self):
         """
-
+        Performs training and evaluation
         :return:
         """
+
         random.seed(self.seed)
         torch.manual_seed(self.seed)
         torch.cuda.manual_seed_all(self.seed)
@@ -147,7 +149,6 @@ class SequenceClassifierModel:
         eval_steps = len(self.val_data) - 1
         # 1. Iterating over the number of epochs
         for epoch in range(0, self.epochs):
-
             # =============================
             # Training
             # =============================
@@ -156,7 +157,6 @@ class SequenceClassifierModel:
             print('Training...')
 
             t0 = time.time()
-
             total_loss, train_accuracy = self._run_training()
 
             # Calculate the average loss over the training data
@@ -177,6 +177,8 @@ class SequenceClassifierModel:
 
         print()
         print('Training Complete')
+
+        self.save_model()
 
     def _run_training(self):
         # 2. Iterating over the batches in train_data_loader👇🏾
@@ -308,15 +310,21 @@ class SequenceClassifierModel:
 
         # Report the final accuracy for this validation run
 
-    def save_model_to_disk(self):
+    def save_model(self):
 
-        output_model_file = os.path.join(self.model_output_dir, WEIGHTS_NAME)
-        output_config_file = os.path.join(self.model_output_dir, CONFIG_NAME)
+        model_full_path = os.path.join(self.model_output_dir, self.this_project_name)
+        if not os.path.exists(model_full_path):
+            os.mkdir(model_full_path)
+
+        output_model_file = os.path.join(model_full_path, WEIGHTS_NAME)
+        output_config_file = os.path.join(model_full_path, CONFIG_NAME)
 
         self.model.to('cpu')
 
+        print(self.model_output_dir)
         model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
 
         torch.save(model_to_save.state_dict(), output_model_file)
         model_to_save.config.to_json_file(output_config_file)
-        self.tokenizer.save_pretrained(self.model_output_dir)
+
+        print(f'model saved to {output_model_file}')

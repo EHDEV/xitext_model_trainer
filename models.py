@@ -77,7 +77,7 @@ class SequenceClassifierModel:
             num_labels,
             train_data,
             val_data,
-            tr_model_id='bert-base-uncased',
+            tr_model_id='distilbert-base-uncased',
             epochs=2,
             lr=2e-5,
             seed=100,

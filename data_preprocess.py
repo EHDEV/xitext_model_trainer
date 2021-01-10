@@ -3,11 +3,11 @@ import os
 import glob
 import numpy as np
 from pathlib import Path
-from utils import FileConfig, train_valid_test_split, SequenceClassifierModel
 from transformers import DistilBertTokenizerFast
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import torch
-from config import FileConfig, ModelConfig
+from config import FileConfig
+from sklearn.model_selection import train_test_split
 
 """
 Each data source will have its own configuration, including
@@ -31,6 +31,17 @@ def _encode_text_into_tokens(sentences):
         return_tensors='pt'
     )
     return inputs
+
+
+def train_valid_test_split(sentences, labels, valid_pct=.15, test_pct=None):
+    _texts, test_texts, _labels, test_labels = train_test_split(sentences, labels, test_size=test_pct)
+
+    if not test_pct:
+        return (_texts, test_texts), (_labels, test_labels)
+
+    train_texts, val_texts, train_labels, val_labels = train_test_split(_texts, _labels, test_size=valid_pct)
+
+    return (train_texts, train_labels), (val_texts, val_labels), (test_texts, test_labels)
 
 
 def _wrap_tensors_in_dataloader(input_tensor, attention_mask_tensor, label_tensor, batch_size=32):
@@ -174,7 +185,7 @@ class TextClassifierData(TextData):
 file_config = FileConfig(
     path_to_directory=Path('/content/drive/MyDrive/elite/elitelearn/data/device_train.csv'),
     target_column='label',
-    sentence_column='sentence',
+    sequence_column='sentence',
     column_names=['index', 'label', 'sentence']
 )
 

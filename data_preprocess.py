@@ -154,7 +154,7 @@ class TextClassifierData(TextData):
         logger.debug('sentence column cleaned')
 
     def _prepare_data_for_training(self):
-        logger('preparing data for training: train/val split and convert to tensor')
+        logger.debug('preparing data for training: train/val split and convert to tensor')
         (train_texts, train_labels), (val_texts, val_labels), (test_texts, test_labels) = train_valid_test_split(
             sentences=self.sentences, labels=self.label_tokens, valid_pct=0.20, test_pct=0.05
         )

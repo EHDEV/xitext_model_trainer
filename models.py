@@ -76,17 +76,17 @@ class SequenceClassifierModel:
     def __init__(
             self,
             this_project_name,
-            tr_model_group,
-            optimizer,
-            scheduler,
             num_labels,
             train_data,
             val_data,
             tr_model_id='distilbert-base-uncased',
+            model_group='bert',
+            optimizer='adam',
+            scheduler='linear',
+            eval_metric='logloss',
             epochs=2,
             lr=2e-5,
             seed=100,
-            eval_metric='logloss',
             output_dir='./models/',
             output_attentions=False,
             output_hidden_states=False
@@ -109,7 +109,7 @@ class SequenceClassifierModel:
         :param output_hidden_states:
         """
         self.this_project_name = this_project_name
-        self.model = tr_model_group.from_pretrained(
+        self.model = MODEL_GROUPS[model_group].from_pretrained(
             pretrained_model_name_or_path=tr_model_id,
             num_labels=num_labels,
             output_attentions=output_attentions,
@@ -125,11 +125,11 @@ class SequenceClassifierModel:
         self.eval_metric = eval_metrics[eval_metric]
         self.model_output_dir = output_dir
         self.lr = lr
-        self.optimizer = AdamW(
+        self.optimizer = optimizers[optimizer](
             params=self.model_params,
             lr=self.lr
         )
-        self.scheduler = scheduler(
+        self.scheduler = schedulers[scheduler](
             optimizer=self.optimizer,
             num_warmup_steps=5,
             num_training_steps=self.total_steps

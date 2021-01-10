@@ -25,9 +25,9 @@ Each data source will have its own configuration, including
 """
 
 
-def _encode_text_into_tokens(sentences):
-    tokenizer = DistilBertTokenizerFast.from_pretrained('distilbert-base-uncased')
-    inputs = tokenizer(
+def _encode_text_into_tokens(sentences, tokenizer):
+
+    inputs = tokenizer.encode_plus(
         sentences,
         add_special_tokens=True,
         max_length=64,
@@ -35,6 +35,7 @@ def _encode_text_into_tokens(sentences):
         truncation=True,
         return_tensors='pt'
     )
+    logger.debug('Encoding input sentences completed')
     return inputs
 
 
@@ -46,6 +47,7 @@ def train_valid_test_split(sentences, labels, valid_pct=.15, test_pct=None):
 
     train_texts, val_texts, train_labels, val_labels = train_test_split(_texts, _labels, test_size=valid_pct)
 
+    logger.debug('train test split completed')
     return (train_texts, train_labels), (val_texts, val_labels), (test_texts, test_labels)
 
 
@@ -56,6 +58,7 @@ def _wrap_tensors_in_dataloader(input_tensor, attention_mask_tensor, label_tenso
     data_dts = TensorDataset(input_tensor, attention_mask_tensor, label_tensor)
     sampler = RandomSampler(data_dts)
 
+    logger.debug('Wrapping tensors in dataloader completed')
     return DataLoader(data_dts, sampler=sampler, batch_size=batch_size)
 
 
@@ -92,6 +95,12 @@ class TextClassifierData(TextData):
     @property
     def num_labels(self):
         return len(set(self.labels))
+
+    @property
+    def tokenizer(self):
+        return DistilBertTokenizerFast.from_pretrained(
+            'distilbert-base-uncased'
+        )
 
     def __init__(self, config_object):
         self.file_config = config_object
@@ -159,8 +168,9 @@ class TextClassifierData(TextData):
             sentences=self.sentences, labels=self.label_tokens, valid_pct=0.20, test_pct=0.05
         )
 
-        train_encodings = _encode_text_into_tokens(train_texts)
-        val_encodings = _encode_text_into_tokens(val_texts)
+        logger.debug('Tokenizing train and valid data')
+        train_encodings = _encode_text_into_tokens(train_texts, self.tokenizer)
+        val_encodings = _encode_text_into_tokens(val_texts, self.tokenizer)
         # test_encodings = _encode_text_into_tokens(test_texts)
 
         train_data_loader = _wrap_tensors_in_dataloader(

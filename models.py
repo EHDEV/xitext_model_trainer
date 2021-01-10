@@ -319,7 +319,7 @@ class SequenceClassifierModel:
 
         model_full_path = os.path.join(self.model_output_dir, self.this_project_name)
         if not os.path.exists(model_full_path):
-            os.mkdir(model_full_path)
+            os.makedirs(model_full_path)
 
         output_model_file = os.path.join(model_full_path, WEIGHTS_NAME)
         output_config_file = os.path.join(model_full_path, CONFIG_NAME)

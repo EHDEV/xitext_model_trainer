@@ -138,7 +138,7 @@ class TextClassifierData(TextData):
 
         logger.debug('Clean_label_column complete')
 
-    def _drop_underrepresented_classes(self, threshhold=.05):
+    def _drop_underrepresented_classes(self, threshhold=0):
         zdf = pd.DataFrame(
             self.data_df[self.file_config.target_column].value_counts() / self.data_df.shape[0] > threshhold
         )

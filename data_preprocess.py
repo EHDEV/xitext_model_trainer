@@ -29,7 +29,7 @@ Each data source will have its own configuration, including
 def _encode_text_into_tokens(sentences, tokenizer):
 
     inputs = tokenizer.encode_plus(
-        sentences,
+        batch_text_or_text_pairs=sentences,
         add_special_tokens=True,
         max_length=64,
         padding=True,

@@ -9,6 +9,11 @@ import torch
 from file_config import FileConfig
 from sklearn.model_selection import train_test_split
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+logger = logging.getLogger('data-preprocessing.log')
+
 """
 Each data source will have its own configuration, including
     - file name or path to directory
@@ -92,6 +97,7 @@ class TextClassifierData(TextData):
         self.file_config = config_object
 
     def _load_data(self):
+        logger.debug('load data started')
         file_path = self.file_config.path_to_directory
         if os.path.isdir(file_path):
             files = glob.glob(f'{file_path}/*.*')
@@ -108,6 +114,7 @@ class TextClassifierData(TextData):
             ) for fp in files
         ]
         self.data_df = pd.concat(dfs, axis=0, ignore_index=True)
+        logger.debug(f'dataframe with shape {self.data_df.shape} has been created')
 
     def _clean_label_column(self):
         """
@@ -120,6 +127,8 @@ class TextClassifierData(TextData):
 
         self.data_df = temp_df
 
+        logger.debug('Clean_label_column complete')
+
     def _drop_underrepresented_classes(self, threshhold=.05):
         zdf = pd.DataFrame(
             self.data_df[self.file_config.target_column].value_counts() / self.data_df.shape[0] > threshhold
@@ -127,6 +136,8 @@ class TextClassifierData(TextData):
         valid_rows = zdf[zdf[self.file_config.target_column] == True].index.tolist()
 
         self.data_df = self.data_df[(self.data_df[self.file_config.target_column].isin(valid_rows))]
+
+        logger.debug('Underrepresented classes have been removed and data condensed')
 
     def _clean_sentence_column(self):
         df = self.data_df
@@ -140,7 +151,10 @@ class TextClassifierData(TextData):
                 )
         self.data_df = df.dropna(how='any', axis=0)
 
+        logger.debug('sentence column cleaned')
+
     def _prepare_data_for_training(self):
+        logger('preparing data for training: train/val split and convert to tensor')
         (train_texts, train_labels), (val_texts, val_labels), (test_texts, test_labels) = train_valid_test_split(
             sentences=self.sentences, labels=self.label_tokens, valid_pct=0.20, test_pct=0.05
         )
@@ -166,6 +180,12 @@ class TextClassifierData(TextData):
         #     label_tensor=test_labels
         # )
 
+        logger.debug(
+            f'data preparation for training is complete. '
+            f'{len(train_data_loader)} train and {len(val_data_loader)} '
+            f'validation examples'
+        )
+
         return train_data_loader, val_data_loader
 
     def preprocess(self, **kwargs):
@@ -180,6 +200,8 @@ class TextClassifierData(TextData):
         self._clean_label_column()
         self._drop_underrepresented_classes()
         train_dataloader, val_dataloader = self._prepare_data_for_training()
+
+        logger.debug('Data preprocessing complete')
 
         return train_dataloader, val_dataloader
 

@@ -15,6 +15,10 @@ from sklearn.metrics import log_loss
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 import os
 
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+logger = logging.getLogger('model-training.log')
 
 def flat_accuracy(preds, labels):
     pred_flat = np.argmax(preds, axis=1).flatten()
@@ -111,7 +115,6 @@ class SequenceClassifierModel:
             output_attentions=output_attentions,
             output_hidden_states=output_hidden_states
         )
-
         self.train_data = train_data
         self.val_data = val_data
         self.num_labels = num_labels
@@ -132,7 +135,10 @@ class SequenceClassifierModel:
             num_training_steps=self.total_steps
         )
         if self.device.type in ('cuda', 'gpu'):
+            logger.debug(f'model training on {self.device}')
             self.model.cuda()
+
+        logger.debug(f'{self.model} model created')
 
     def train(self):
         """

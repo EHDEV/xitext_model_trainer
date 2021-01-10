@@ -40,11 +40,12 @@ optimizers = dict(
 )
 
 schedulers = dict(
-    get_linear_schedule_with_warmup
+    linear=get_linear_schedule_with_warmup
 )
 
 eval_metrics = dict(
-    accuracy=flat_accuracy
+    accuracy=flat_accuracy,
+    logloss=log_loss
 )
 
 
@@ -81,7 +82,7 @@ class SequenceClassifierModel:
             epochs=2,
             lr=2e-5,
             seed=100,
-            eval_metric='accuracy',
+            eval_metric='logloss',
             output_dir='./models/',
             output_attentions=False,
             output_hidden_states=False
@@ -213,7 +214,6 @@ class SequenceClassifierModel:
 
             outputs = self.model(
                 b_input_ids,
-                token_type_ids=None,
                 attention_mask=b_input_mask,
                 labels=b_input_labels
             )
@@ -286,7 +286,6 @@ class SequenceClassifierModel:
 
                 outputs = self.model(
                     b_input_ids,
-                    token_type_ids=None,
                     attention_mask=b_input_mask
                 )  # labels are not passed here in validation
 
@@ -324,7 +323,6 @@ class SequenceClassifierModel:
         print(self.model_output_dir)
         model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
 
-        torch.save(model_to_save.state_dict(), output_model_file)
-        model_to_save.config.to_json_file(output_config_file)
+        torch.save(model_to_save, output_model_file)
 
         print(f'model saved to {output_model_file}')

@@ -8,6 +8,7 @@ from torch.utils.data import TensorDataset, DataLoader, RandomSampler, Sequentia
 import torch
 from file_config import FileConfig
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -79,18 +80,31 @@ class TextClassifierData(TextData):
     def labels(self):
         return self.data_df[self.file_config.target_column].tolist()
 
+    # @property
+    # def label_to_idx(self):
+    #     classes = sorted(set(self.data_df[self.file_config.target_column]))
+    #     return {
+    #         label: i for i, label in enumerate(classes)
+    #     }
+    
     @property
-    def label_to_idx(self):
-        classes = sorted(set(self.data_df[self.file_config.target_column]))
-        return {
-            label: i for i, label in enumerate(classes)
-        }
+    def label_encoder(self):
+        return LabelEncoder().fit(self.labels)
 
     @property
-    def label_tokens(self):
-        return [
-            self.label_to_idx[lb_text] for lb_text in self.labels
-        ]
+    def lable_tokens(self):
+        tokens = self.label_encoder.transform(self.labels)
+        return tokens
+
+    @property
+    def classes(self):
+        return self.label_encoder.classes_
+
+    # @property
+    # def label_tokens(self):
+    #     return [
+    #         self.label_to_idx[lb_text] for lb_text in self.labels
+    #     ]
 
     @property
     def num_labels(self):

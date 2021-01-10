@@ -92,7 +92,7 @@ class TextClassifierData(TextData):
         return LabelEncoder().fit(self.labels)
 
     @property
-    def lable_tokens(self):
+    def label_tokens(self):
         tokens = self.label_encoder.transform(self.labels)
         return tokens
 

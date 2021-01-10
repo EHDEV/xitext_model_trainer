@@ -52,7 +52,7 @@ def train_valid_test_split(sentences, labels, valid_pct=.15, test_pct=None):
     return (train_texts, train_labels), (val_texts, val_labels), (test_texts, test_labels)
 
 
-def _wrap_tensors_in_dataloader(input_tensor, attention_mask_tensor, label_tensor, batch_size=32):
+def _wrap_tensors_in_dataloader(input_tensor, attention_mask_tensor, label_tensor, batch_size=64):
     # DataLoader requires batch_size for training
     # Recommended batch sizes are 16 and 32
 
@@ -209,6 +209,8 @@ class TextClassifierData(TextData):
             f'{len(train_data_loader)} train and {len(val_data_loader)} '
             f'validation examples'
         )
+
+
 
         return train_data_loader, val_data_loader
 

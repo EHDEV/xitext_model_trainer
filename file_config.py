@@ -1,9 +1,3 @@
-from transformers import (
-    DistilBertTokenizerFast,
-    DistilBertForSequenceClassification,
-    BertForSequenceClassification
-)
-
 class FileConfig:
     """
     Data file configurations are updated here
@@ -19,13 +13,14 @@ class FileConfig:
             encoding='utf-8',
             min_sentence_length=5
     ):
-        self.path_to_directory = path_to_directory,
-        self.target_column = target_column,
-        self.sequence_column = sequence_column,
-        self.column_names = column_names or [sequence_column, target_column],
-        self.delimiter = delimiter,
-        self.header_column = header_column,
-        self.encoding = encoding,
+
+        self.path_to_directory = path_to_directory
+        self.target_column = target_column
+        self.sequence_column = sequence_column
+        self.column_names = column_names or [sequence_column, target_column]
+        self.delimiter = delimiter
+        self.header_column = header_column
+        self.encoding = encoding
         self.min_sentence_length = min_sentence_length
 
 #

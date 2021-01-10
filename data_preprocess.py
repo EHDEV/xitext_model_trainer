@@ -6,7 +6,7 @@ from pathlib import Path
 from transformers import DistilBertTokenizerFast
 from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
 import torch
-from config import FileConfig
+from file_config import FileConfig
 from sklearn.model_selection import train_test_split
 
 """
@@ -65,7 +65,7 @@ class TextClassifierData(TextData):
 
     @property
     def sentences(self):
-        return self.data_df[self.file_config.sentence_column].tolist()
+        return self.data_df[self.file_config.sequence_column].tolist()
 
     @property
     def labels(self):
@@ -124,15 +124,17 @@ class TextClassifierData(TextData):
         zdf = pd.DataFrame(
             self.data_df[self.file_config.target_column].value_counts() / self.data_df.shape[0] > threshhold
         )
-        valid_rows = zdf[zdf.label == True].index.tolist()
+        valid_rows = zdf[zdf[self.file_config.target_column] == True].index.tolist()
 
-        self.data_df = self.data_df[(self.data_df.label.isin(valid_rows))]
+        self.data_df = self.data_df[(self.data_df[self.file_config.target_column].isin(valid_rows))]
 
     def _clean_sentence_column(self):
         df = self.data_df
-        df[self.file_config.sentence_column] = df[self.file_config.sentence_column].str.lower().str.strip()
+        seq_column = self.file_config.sequence_column
+
+        df[seq_column] = df[seq_column].str.lower().str.strip()
         df.drop(index=np.where(
-            df[self.file_config.sentence_column].str.len() < self.file_config.min_sentence_length)[0],
+            df[seq_column].str.len() < self.file_config.min_sentence_length)[0],
                 axis=0,
                 inplace=True
                 )

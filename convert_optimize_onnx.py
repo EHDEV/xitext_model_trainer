@@ -25,7 +25,7 @@ class TorchToONNX:
         self.torch_model = torch.load(torch_model_path)
         self.onnx_model_local_dir = onnx_model_dir
         self.tokenizer = tokenizer
-        self.model_type=model_type,
+        self.model_type = model_type
         self.onnx_model_filename = onnx_model_filename
         self.onnx_model_optimized_filename = onnx_model_optimized_filename
 

@@ -9,6 +9,7 @@ import torch
 import numpy as np
 import time, datetime
 import random
+import datetime
 
 from sklearn.metrics import log_loss
 
@@ -140,7 +141,7 @@ class SequenceClassifierModel:
 
         logger.debug(f'{self.model} model created')
 
-    def train(self):
+    def train(self, save_model=True):
         """
         Performs training and evaluation
         :return:
@@ -185,7 +186,8 @@ class SequenceClassifierModel:
         print()
         print('Training Complete')
 
-        self.save_model()
+        if save_model:
+            self.save_model()
 
     def _run_training(self):
         # 2. Iterating over the batches in train_data_loader👇🏾
@@ -194,6 +196,7 @@ class SequenceClassifierModel:
         total_loss = 0  # Reset the total loss for this epoch.
 
         train_accuracy = 0.0
+        train_logloss = 0.0
 
         t1 = time.time()
 
@@ -233,7 +236,9 @@ class SequenceClassifierModel:
             tlabel_ids = b_input_labels.detach().cpu().numpy()
 
             tmp_tr_acc = flat_accuracy(tlogits, tlabel_ids)
+            tmp_tr_ll = self.eval_metric(tlabel_ids, softmax(tlogits))
             train_accuracy += tmp_tr_acc
+            train_logloss += tmp_tr_ll
 
             # 👇🏾Accumulate the training loss over all of the batches so that we can
             # calculate the average loss at the end. `loss` is a Tensor containing a
@@ -317,12 +322,13 @@ class SequenceClassifierModel:
 
     def save_model(self):
 
+        today = datetime.datetime.today().strftime('%y-%m-%d')
         model_full_path = os.path.join(self.model_output_dir, self.this_project_name)
         if not os.path.exists(model_full_path):
             os.makedirs(model_full_path)
 
-        output_model_file = os.path.join(model_full_path, WEIGHTS_NAME)
-        output_config_file = os.path.join(model_full_path, CONFIG_NAME)
+        output_model_file = os.path.join(model_full_path, today, WEIGHTS_NAME)
+        output_config_file = os.path.join(model_full_path, today, CONFIG_NAME)
 
         self.model.to('cpu')
 

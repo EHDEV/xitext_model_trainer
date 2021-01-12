@@ -77,7 +77,6 @@ class SequenceClassifierModel:
 
     def __init__(
             self,
-            this_project_name,
             num_labels,
             train_data,
             val_data,
@@ -89,14 +88,15 @@ class SequenceClassifierModel:
             epochs=2,
             lr=2e-5,
             seed=100,
-            output_dir='./models/',
+            project_home='.',
+            model_output_dir='./models/',
+            model_output_filename=WEIGHTS_NAME,
             output_attentions=False,
             output_hidden_states=False
 
     ):
         """
-
-        :param tr_pretrained_model_name_or_path:
+        Instanciate model
         :param optimizer:
         :param scheduler:
         :param num_labels:
@@ -106,11 +106,11 @@ class SequenceClassifierModel:
         :param epochs:
         :param seed:
         :param eval_metric:
-        :param output_dir:
+        :param model_output_dir:
         :param output_attentions:
         :param output_hidden_states:
         """
-        self.this_project_name = this_project_name
+        self.project_home = project_home
         self.model = MODEL_GROUPS[model_group].from_pretrained(
             pretrained_model_name_or_path=tr_model_id,
             num_labels=num_labels,
@@ -125,7 +125,8 @@ class SequenceClassifierModel:
         self.scheduler = scheduler
         self.seed = seed
         self.eval_metric = eval_metrics[eval_metric]
-        self.model_output_dir = output_dir
+        self.model_output_dir = model_output_dir
+        self.model_output_filename = model_output_filename
         self.lr = lr
         self.optimizer = optimizers[optimizer](
             params=self.model_params,
@@ -185,7 +186,7 @@ class SequenceClassifierModel:
             print(f' Validation took: {format_time(time.time() - t0)}')
 
         print()
-        print('Training Complete')
+        logger.debug('Training Complete')
 
         if save_model:
             self.save_model()
@@ -265,7 +266,7 @@ class SequenceClassifierModel:
         # After the completion of each training epoch, measure your performance
         # on the validation set
         print()
-        print('Running Validation...')
+        logger.debug('Running Validation...')
 
         # put the model in evaluation mode -- the dropout layers behave differently
         # during evaluation
@@ -326,19 +327,17 @@ class SequenceClassifierModel:
 
     def save_model(self):
 
-        today = datetime.datetime.today().strftime('%y-%m-%d')
-        model_full_path = os.path.join(self.model_output_dir, self.this_project_name)
-        if not os.path.exists(model_full_path):
-            os.makedirs(model_full_path)
+        # today = datetime.datetime.today().strftime('%y-%m-%d')
+        if not os.path.exists(self.model_output_dir):
+            os.makedirs(self.model_output_dir)
 
-        output_model_file = os.path.join(model_full_path, today, WEIGHTS_NAME)
-        output_config_file = os.path.join(model_full_path, today, CONFIG_NAME)
+        output_model_file = os.path.join(self.model_output_dir, self.model_output_filename)
 
         self.model.to('cpu')
 
-        print(self.model_output_dir)
+        logger.debug(self.model_output_dir)
         model_to_save = self.model.module if hasattr(self.model, 'module') else self.model
 
         torch.save(model_to_save, output_model_file)
 
-        print(f'model saved to {output_model_file}')
+        logger.debug(f'model saved to {output_model_file}')

@@ -12,6 +12,7 @@ import random
 import datetime
 
 from sklearn.metrics import log_loss
+from scipy.special import softmax
 
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 import os
@@ -254,7 +255,7 @@ class SequenceClassifierModel:
             self.optimizer.step()
             self.scheduler.step()  # Update the learning rate
 
-        return total_loss, train_accuracy
+        return total_loss, train_accuracy, train_logloss
 
     def _run_validation(self):
         # =====================================
@@ -273,7 +274,7 @@ class SequenceClassifierModel:
 
         # Tracking variables
 
-        eval_loss, eval_accuracy = 0, 0
+        eval_loss, eval_accuracy, eval_logloss = 0, 0, 0
         nb_eval_steps, nb_eval_examples = 0, 0
 
         # Evaluate data for one epoch
@@ -312,11 +313,14 @@ class SequenceClassifierModel:
 
                 # Calculate the accuracy for this batch of test sentences.
                 tmp_eval_accuracy = flat_accuracy(logits, label_ids)
+                tmp_eval_logloss = log_loss(label_ids, softmax(logits))
+
                 eval_accuracy += tmp_eval_accuracy
+                eval_logloss += tmp_eval_logloss
 
                 # track the number of batches
                 nb_eval_steps += 1
-        return eval_accuracy
+        return eval_accuracy, eval_logloss
 
         # Report the final accuracy for this validation run
 

@@ -123,7 +123,7 @@ class TextClassifierData(TextData):
         logger.debug('load data started')
         file_path = self.file_config.path_to_directory
         if os.path.isdir(file_path):
-            files = glob.glob(f'{file_path}/*.*')
+            files = glob.glob(f'{file_path}/*.csv') + glob.glob(f'{file_path}/*.txt')
         else:
             files = [file_path]
 

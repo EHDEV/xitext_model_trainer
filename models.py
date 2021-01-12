@@ -12,7 +12,7 @@ import random
 import datetime
 
 from sklearn.metrics import log_loss
-from scipy.special import softmax
+# from scipy.special import softmax
 
 from transformers import WEIGHTS_NAME, CONFIG_NAME
 import os
@@ -197,7 +197,7 @@ class SequenceClassifierModel:
         total_loss = 0  # Reset the total loss for this epoch.
 
         train_accuracy = 0.0
-        train_logloss = 0.0
+        # train_logloss = 0.0
 
         t1 = time.time()
 
@@ -237,9 +237,9 @@ class SequenceClassifierModel:
             tlabel_ids = b_input_labels.detach().cpu().numpy()
 
             tmp_tr_acc = flat_accuracy(tlogits, tlabel_ids)
-            tmp_tr_ll = self.eval_metric(tlabel_ids, softmax(tlogits))
+            # tmp_tr_ll = self.eval_metric(tlabel_ids, softmax(tlogits, axis=1))
             train_accuracy += tmp_tr_acc
-            train_logloss += tmp_tr_ll
+            # train_logloss += tmp_tr_ll
 
             # 👇🏾Accumulate the training loss over all of the batches so that we can
             # calculate the average loss at the end. `loss` is a Tensor containing a
@@ -255,7 +255,7 @@ class SequenceClassifierModel:
             self.optimizer.step()
             self.scheduler.step()  # Update the learning rate
 
-        return total_loss, train_accuracy, train_logloss
+        return total_loss, train_accuracy #, train_logloss
 
     def _run_validation(self):
         # =====================================
@@ -274,7 +274,7 @@ class SequenceClassifierModel:
 
         # Tracking variables
 
-        eval_loss, eval_accuracy, eval_logloss = 0, 0, 0
+        eval_loss, eval_accuracy = 0, 0
         nb_eval_steps, nb_eval_examples = 0, 0
 
         # Evaluate data for one epoch
@@ -313,14 +313,14 @@ class SequenceClassifierModel:
 
                 # Calculate the accuracy for this batch of test sentences.
                 tmp_eval_accuracy = flat_accuracy(logits, label_ids)
-                tmp_eval_logloss = log_loss(label_ids, softmax(logits))
+                #tmp_eval_logloss = log_loss(label_ids, softmax(logits))
 
                 eval_accuracy += tmp_eval_accuracy
-                eval_logloss += tmp_eval_logloss
+                #eval_logloss += tmp_eval_logloss
 
                 # track the number of batches
                 nb_eval_steps += 1
-        return eval_accuracy, eval_logloss
+        return eval_accuracy #, eval_logloss
 
         # Report the final accuracy for this validation run
 

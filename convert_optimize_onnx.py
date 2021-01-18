@@ -29,8 +29,8 @@ class TorchToONNX:
         self.onnx_model_filename = onnx_model_filename
         self.onnx_model_optimized_filename = onnx_model_optimized_filename
 
-        self.onnx_model_full_path = Path(self.onnx_model_local_dir / self.onnx_model_filename)
-        self.optimized_model_path = Path(self.onnx_model_local_dir / self.onnx_model_optimized_filename)
+        self.onnx_model_full_path = Path(self.onnx_model_local_dir)/self.onnx_model_filename
+        self.optimized_model_path = Path(self.onnx_model_local_dir)/self.onnx_model_optimized_filename
 
     def convert_torch_to_onnx(self):
         """

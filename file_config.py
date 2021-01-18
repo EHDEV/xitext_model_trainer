@@ -9,7 +9,7 @@ class FileConfig:
             sequence_column='text',
             column_names=None,
             delimiter=',',
-            header_column=0,
+            header_column=None,
             encoding='utf-8',
             min_sentence_length=5
     ):
